@@ -275,25 +275,41 @@ def perform_health_check(
             bt.logging.debug(f"{hotkey}: Failed to upload health check script - miner may have insufficient disk space or permissions")
             return False
 
-        internal_health_check_port = 27015
-        bt.logging.trace(f"{hotkey}: Starting health check server in background on port {internal_health_check_port}.")
-        server_started, channel = start_health_check_server_background(ssh_client, internal_health_check_port, timeout=60)
+        # Get external ports to validate
+        external_user_ports = miner_info.get('external_user_ports', {})
 
-        if not server_started or channel is None:
-            bt.logging.debug(f"{hotkey}: Failed to start health check server - miner may have insufficient resources or Python not available")
-            return False
+        # Start health check servers on all internal ports
+        channels = []
+        internal_ports = list(external_user_ports.keys())
+
+        for internal_port in internal_ports:
+            bt.logging.trace(f"{hotkey}: Starting health check server in background on port {internal_port}.")
+            server_started, channel = start_health_check_server_background(ssh_client, int(internal_port), timeout=60)
+
+            if not server_started or channel is None:
+                bt.logging.debug(f"{hotkey}: Failed to start health check server on port {internal_port} - miner may have insufficient resources or Python not available")
+                # Close any previously opened channels
+                for ch in channels:
+                    if ch and not ch.closed:
+                        ch.close()
+                return False
+
+            channels.append(channel)
 
         server_ready_timeout = 15
 
-        bt.logging.debug(f"{hotkey}: Attempting to confirm health check server's internal readiness via port check.")
-        if not wait_for_port_ready(ssh_client, internal_health_check_port, server_ready_timeout, hotkey):
-            bt.logging.debug(f"{hotkey}: Health check server failed to start properly - server may have crashed or port is blocked")
-            return False
+        # Wait for all servers to be ready
+        for internal_port in internal_ports:
+            bt.logging.debug(f"{hotkey}: Attempting to confirm health check server's internal readiness via port check on {internal_port}.")
+            if not wait_for_port_ready(ssh_client, int(internal_port), server_ready_timeout, hotkey):
+                bt.logging.debug(f"{hotkey}: Health check server on port {internal_port} failed to start properly - server may have crashed or port is blocked")
+                # Close all channels
+                for ch in channels:
+                    if ch and not ch.closed:
+                        ch.close()
+                return False
 
-        bt.logging.debug(f"{hotkey}: Health check server confirmed internally ready via port check.")
-
-        # Get external ports to validate
-        external_user_ports = miner_info.get('external_user_ports', {})
+        bt.logging.debug(f"{hotkey}: All health check servers confirmed internally ready via port check.")
 
         health_check_timeout = 15
         health_check_retry_interval = 1
@@ -310,10 +326,6 @@ def perform_health_check(
                 retry_interval=health_check_retry_interval
             )
 
-            if channel and not channel.closed:
-                bt.logging.trace(f"{hotkey}: Reading any further server output after HTTP check completion for port {external_port}.")
-                read_channel_output(channel, hotkey)
-
             if not health_check_success:
                 bt.logging.debug(f"{hotkey}: External health check failed for port {external_port} (internal: {internal_port}) - port may be blocked by firewall or miner is misconfigured")
                 all_ports_valid = False
@@ -321,17 +333,33 @@ def perform_health_check(
             else:
                 bt.logging.trace(f"{hotkey}: Port {external_port} (internal: {internal_port}) validation successful.")
 
+        # Read output from all channels
+        for channel in channels:
+            if channel and not channel.closed:
+                bt.logging.trace(f"{hotkey}: Reading server output from channel.")
+                read_channel_output(channel, hotkey)
+
         if not all_ports_valid:
+            # Close all channels before returning
+            for channel in channels:
+                if channel and not channel.closed:
+                    channel.close()
             return False
 
-        bt.logging.trace(f"{hotkey}: Health check successful. Attempting to kill health check server.")
-        if kill_health_check_server(ssh_client, internal_health_check_port):
-            bt.logging.trace(f"{hotkey}: Health check server successfully terminated.")
+        # Kill all health check servers
+        bt.logging.trace(f"{hotkey}: Health check successful. Attempting to kill all health check servers.")
+        for internal_port in internal_ports:
+            if kill_health_check_server(ssh_client, int(internal_port)):
+                bt.logging.trace(f"{hotkey}: Health check server on port {internal_port} successfully terminated.")
+            else:
+                bt.logging.debug(f"{hotkey}: Failed to explicitly kill health check server on port {internal_port}, but check was successful. It might be self-terminating.")
+
+        # Read final output and close all channels
+        for channel in channels:
             if channel and not channel.closed:
                 bt.logging.trace(f"{hotkey}: Reading final server output after termination.")
                 read_channel_output(channel, hotkey)
-        else:
-            bt.logging.debug(f"{hotkey}: Failed to explicitly kill health check server, but check was successful. It might be self-terminating.")
+                channel.close()
 
         return True
 
