@@ -79,10 +79,7 @@ class Allocate(bt.Synapse):
     docker_requirement: dict = {
         "base_image": "ubuntu",
         "ssh_key": "",
-        "ssh_port": 4444,
-        "volume_path": "/tmp",
-        "dockerfile": "",
-        "fixed_external_user_port": 27015,  # Default value to be overridden with settings
+        "external_user_ports": {},  # Dict mapping internal to external ports {27015: ext1, 27016: ext2, ...}
     }
     docker_change: bool = False
     docker_action: dict = {

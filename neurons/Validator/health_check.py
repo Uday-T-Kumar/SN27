@@ -292,25 +292,36 @@ def perform_health_check(
 
         bt.logging.debug(f"{hotkey}: Health check server confirmed internally ready via port check.")
 
-        external_health_check_port = miner_info.get('fixed_external_user_port', 27015)
+        # Get external ports to validate
+        external_user_ports = miner_info.get('external_user_ports', {})
+
         health_check_timeout = 15
         health_check_retry_interval = 1
 
-        bt.logging.trace(f"{hotkey}: Performing external HTTP health check on {host}:{external_health_check_port}.")
+        # Validate all external ports
+        all_ports_valid = True
+        for internal_port, external_port in external_user_ports.items():
+            bt.logging.trace(f"{hotkey}: Performing external HTTP health check on {host}:{external_port} (internal: {internal_port}).")
 
-        health_check_success = wait_for_health_check(
-            host,
-            external_health_check_port,
-            timeout=health_check_timeout,
-            retry_interval=health_check_retry_interval
-        )
+            health_check_success = wait_for_health_check(
+                host,
+                external_port,
+                timeout=health_check_timeout,
+                retry_interval=health_check_retry_interval
+            )
 
-        if channel and not channel.closed:
-            bt.logging.trace(f"{hotkey}: Reading any further server output after HTTP check completion.")
-            read_channel_output(channel, hotkey)
+            if channel and not channel.closed:
+                bt.logging.trace(f"{hotkey}: Reading any further server output after HTTP check completion for port {external_port}.")
+                read_channel_output(channel, hotkey)
 
-        if not health_check_success:
-            bt.logging.debug(f"{hotkey}: External health check failed - port {external_health_check_port} may be blocked by firewall or miner is misconfigured")
+            if not health_check_success:
+                bt.logging.debug(f"{hotkey}: External health check failed for port {external_port} (internal: {internal_port}) - port may be blocked by firewall or miner is misconfigured")
+                all_ports_valid = False
+                break
+            else:
+                bt.logging.trace(f"{hotkey}: Port {external_port} (internal: {internal_port}) validation successful.")
+
+        if not all_ports_valid:
             return False
 
         bt.logging.trace(f"{hotkey}: Health check successful. Attempting to kill health check server.")

@@ -421,8 +421,26 @@ class Miner:
         device_requirement = synapse.device_requirement
         checking = synapse.checking
         docker_requirement = synapse.docker_requirement
-        docker_requirement["ssh_port"] = int(self.config.ssh.port)
-        docker_requirement["fixed_external_user_port"] = int(self.config.external.fixed_port)
+        docker_requirement["external_ports"] = {
+            "ssh": int(self.config.ssh.port),
+        }
+
+        # Multiple ports support
+        # Parse --external.ports which is a comma-separated list like "27015,27016,27017,27018"
+        external_ports_str = getattr(self.config.external, 'ports', "27015,27016,27017,27018")
+        external_ports_list = [int(p.strip()) for p in external_ports_str.split(",")]
+
+        # Internal ports are fixed: 27015, 27016, 27017, 27018
+        internal_ports = [27015, 27016, 27017, 27018]
+
+        # Map internal to external ports
+        external_user_ports = {}
+        for i, internal_port in enumerate(internal_ports):
+            if i < len(external_ports_list):
+                external_user_ports[internal_port] = external_ports_list[i]
+
+        docker_requirement["external_user_ports"] = external_user_ports
+
         docker_change = synapse.docker_change
         docker_action = synapse.docker_action
 
