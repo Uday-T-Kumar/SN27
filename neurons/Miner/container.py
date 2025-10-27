@@ -112,8 +112,8 @@ def run_container(cpu_usage, ram_usage, hard_disk_usage, gpu_usage, public_key, 
         # the code needs some cleaning up (out of scope for the hotfix)
         docker_volume = docker_requirement.get("volume_path")
         docker_ssh_key = docker_requirement.get("ssh_key")
-        docker_ssh_port = docker_requirement.get("ssh_port")
-        external_user_port = docker_requirement.get("fixed_external_user_port")
+        docker_external_ports = docker_requirement.get("external_ports", {})
+        docker_ssh_port = docker_external_ports.get("ssh", 4444)
         docker_appendix = docker_requirement.get("dockerfile")
 
         # ensure base image exists
@@ -126,6 +126,9 @@ def run_container(cpu_usage, ram_usage, hard_disk_usage, gpu_usage, public_key, 
 
         # Get external_user_ports for multiple port support
         external_user_ports = docker_requirement.get("external_user_ports", {})
+
+        # Initialize ports_mapping with SSH port
+        ports_mapping = {22: docker_ssh_port}
 
         # Merge external_user_ports into ports_mapping
         for internal_port, external_port in external_user_ports.items():
@@ -176,7 +179,7 @@ def run_container(cpu_usage, ram_usage, hard_disk_usage, gpu_usage, public_key, 
             detach=True,
             device_requests=device_requests,
             environment=["NVIDIA_VISIBLE_DEVICES=all"],
-            ports={22: docker_ssh_port, INTERNAL_USER_PORT: external_user_port},
+            ports=ports_mapping,
             init=True,
             shm_size=f"{shm_size_gb}g",  # Set the shared memory size to 2GB
             restart_policy={"Name": "on-failure", "MaximumRetryCount": 3},
