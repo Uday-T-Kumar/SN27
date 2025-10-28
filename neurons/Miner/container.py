@@ -189,10 +189,6 @@ def run_container(cpu_usage, ram_usage, hard_disk_usage, gpu_usage, public_key, 
         # Check the status to determine if the container ran successfully
         if container.status == "created":
             bt.logging.info("Container was created successfully.")
-
-            exec_update_container_key(container, new_ssh_key=docker_ssh_key, key_type="user", password=password)
-            bt.logging.info("Container ssh key set.")
-
             info = {
                     "username": "root",
                     "password": password,
