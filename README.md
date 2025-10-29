@@ -92,7 +92,7 @@ Welcome to the **Bittensor NI Compute Subnet** repository. This subnet powers a 
 - **Rewards**: Performance-based. Higher-performance devices with more GPUs receive higher rewards.
 - **Key Requirements**:
   - GPU(s) with up-to-date drivers.
-  - Properly opened ports. E.g. 4444 for validator allocations, 8091 for serving the axon.
+  - Properly opened ports. E.g. 4444 for validator allocations, 8091 for serving the axon, and 27015-27018 for external client access.
   - A registered wallet hotkey on the correct Bittensor subnet (netuid 27 for main, or netuid 15 for test).
 
 ### Validator
@@ -326,11 +326,11 @@ pm2 ls
 
 ## Networking and Firewall
 
-Your miner requires **three essential ports** to be opened:
+Your miner requires **multiple essential ports** to be opened:
 
 - **Port 4444 (SSH)**: Used by validators to access your miner for PoG (Proof of GPU) validation. Validators verify GPU functionality, available resources, and hardware specs through this port. **Required for miners to appear in the network.**
 - **Port 8091 (Axon)**: Used for Bittensor validator-miner communication. **Critical for network functionality.**
-- **Port 27015 (External Fixed Port)**: Fixed external port that clients can use for their own purposes during allocations. **Validators verify this port is accessible - if not open, miners will not appear in the dashboard or pass validation requirements.**
+- **Ports 27015-27018 (External Ports)**: Multiple external ports that clients can use for their own purposes during allocations. **Validators verify these ports are accessible - if not open, miners will not appear in the dashboard or pass validation requirements.** Default ports are 27015, 27016, 27017, and 27018, but these can be customized.
 
 ### Port Validation Tool
 
@@ -343,14 +343,14 @@ python3 scripts/validate_miner_ports.py
 **⚠️ IMPORTANT: Ensure the ports you're testing are NOT being used by other services (including your miner) before running this validation script. The script needs to bind to these ports to test accessibility.**
 
 This tool will:
-- ✅ **Test external accessibility** of all three required ports
+- ✅ **Test external accessibility** of all required ports (SSH, Axon, and multiple external ports)
 - ✅ **Check firewall configuration** (UFW status and rules)
 - ✅ **Detect NAT/router issues** for home networks
 - ✅ **Provide specific troubleshooting steps** based on your setup
 
 **Custom port testing:**
 ```bash
-python3 scripts/validate_miner_ports.py --ssh-port 4444 --axon-port 8091 --external-port 27015
+python3 scripts/validate_miner_ports.py --ssh-port 4444 --axon-port 8091 --external-ports 27015,27016,27017,27018
 ```
 
 The validator provides real-time feedback and troubleshooting guidance for:
@@ -366,7 +366,10 @@ The validator provides real-time feedback and troubleshooting guidance for:
    sudo ufw allow 4444       # SSH port for PoG validation
    sudo ufw allow 22/tcp     # Standard SSH
    sudo ufw allow 8091/tcp   # Axon port - can be customized
-   sudo ufw allow 27015/tcp  # External fixed port - can be customized
+   sudo ufw allow 27015/tcp  # External port 1
+   sudo ufw allow 27016/tcp  # External port 2
+   sudo ufw allow 27017/tcp  # External port 3
+   sudo ufw allow 27018/tcp  # External port 4
    sudo ufw enable
    sudo ufw status
    ```
@@ -376,7 +379,7 @@ The validator provides real-time feedback and troubleshooting guidance for:
    python3 scripts/validate_miner_ports.py
    ```
 
-> **Custom Ports**: You can use different ports by opening them with `sudo ufw allow XXXX/tcp` and specifying them in your miner configuration with `--axon.port XXXX`, `--ssh.port XXXX`, or `--external.fixed-port XXXX`. If using a cloud server, ensure these ports are also opened in your provider's firewall/security groups.
+> **Custom Ports**: You can use different ports by opening them with `sudo ufw allow XXXX/tcp` and specifying them in your miner configuration with `--axon.port XXXX`, `--ssh.port XXXX`, or `--external.ports XXXX,YYYY,ZZZZ,WWWW`. If using a cloud server, ensure these ports are also opened in your provider's firewall/security groups.
 
 3. **Add user to docker group** (if not already):
    ```bash
@@ -428,7 +431,7 @@ pm2 start ./neurons/miner.py --name <MINER_NAME> --interpreter python3 -- \
 - **`--wallet.name`** & **`--wallet.hotkey`**: The coldkey/hotkey names you created [above](#create-or-regenerate-keys) and used in registration (btcli's defaults are `default` and `default` but both can be freely customized)
 - **`--axon.port`**: default 8091 can be replaced with any port number allowed by ufw as instructed [above](#networking-and-firewall) to serve your axon. Important for proper functionality and miner<->validator communication.
 - **`--ssh.port`**: A port opened with UFW as instructed [above](#networking-and-firewall) (e.g., 4444) used for allocating your miner via ssh.
-- **`--external.fixed-port`**: A port opened with UFW as instructed [above](#networking-and-firewall) (default: 27015) that clients can use for their own purposes during allocations. Required for validation.
+- **`--external.ports`**: Comma-separated list of external ports opened with UFW as instructed [above](#networking-and-firewall) (default: 27015,27016,27017,27018) that clients can use for their own purposes during allocations. Required for validation.
 - **`--auto-update`**: Enables automatic updating of the miner. When enabled, the miner will internally perform the update process (e.g., running `git pull`, installing dependencies, and restarting via PM2) so that no manual action is required.
 
 ### Configuration File Usage (Alternative to Long CLI Commands)
@@ -439,7 +442,7 @@ Instead of using long PM2 commands with many flags, you can use a configuration 
 ```bash
 pm2 start ./neurons/miner.py --name MINER --interpreter python3 -- \
   --netuid 27 --subtensor.network finney --wallet.name default --wallet.hotkey default \
-  --axon.port 8091 --ssh.port 4444 --external.fixed-port 27015 --logging.debug --auto_update yes
+  --axon.port 8091 --ssh.port 4444 --external.ports 27015,27016,27017,27018 --logging.debug --auto_update yes
 ```
 
 #### Option 2: Configuration File (Recommended)
