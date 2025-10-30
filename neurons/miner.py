@@ -421,6 +421,7 @@ class Miner:
         device_requirement = synapse.device_requirement
         checking = synapse.checking
         docker_requirement = synapse.docker_requirement
+        docker_requirement["ssh_port"] = int(self.config.ssh.port)
         docker_requirement["external_ports"] = {
             "ssh": int(self.config.ssh.port),
         }
