@@ -38,8 +38,8 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
 # Port configuration
-INTERNAL_USER_PORT = 27015  # Port inside the container for user applications
-# External user port is configured via --external.fixed-port flag
+INTERNAL_USER_PORTS = [27015, 27016, 27017, 27018]  # Ports inside the container for user applications
+# External user ports are configured via --external.ports flag
 
 # XXX: global constants should be capitalized or (better) avoided
 image_name = "ssh-image"  # Docker image name
@@ -113,7 +113,6 @@ def run_container(cpu_usage, ram_usage, hard_disk_usage, gpu_usage, public_key, 
         docker_volume = docker_requirement.get("volume_path")
         docker_ssh_key = docker_requirement.get("ssh_key")
         docker_ssh_port = docker_requirement.get("ssh_port")
-        external_user_port = docker_requirement.get("fixed_external_user_port")
         docker_appendix = docker_requirement.get("dockerfile")
 
         # ensure base image exists
@@ -123,6 +122,16 @@ def run_container(cpu_usage, ram_usage, hard_disk_usage, gpu_usage, public_key, 
 
         if docker_appendix is None or docker_appendix == "":
             docker_appendix = "echo 'Hello World!'"
+
+        # Get external_user_ports for multiple port support
+        external_user_ports = docker_requirement.get("external_user_ports", {})
+
+        # Initialize ports_mapping with SSH port
+        ports_mapping = {22: docker_ssh_port}
+
+        # Merge external_user_ports into ports_mapping
+        for internal_port, external_port in external_user_ports.items():
+            ports_mapping[int(internal_port)] = external_port
 
         # Calculate 90% of free memory for shm_size
         available_memory = psutil.virtual_memory().available
@@ -169,7 +178,7 @@ def run_container(cpu_usage, ram_usage, hard_disk_usage, gpu_usage, public_key, 
             detach=True,
             device_requests=device_requests,
             environment=["NVIDIA_VISIBLE_DEVICES=all"],
-            ports={22: docker_ssh_port, INTERNAL_USER_PORT: external_user_port},
+            ports=ports_mapping,
             init=True,
             shm_size=f"{shm_size_gb}g",  # Set the shared memory size to 2GB
             restart_policy={"Name": "on-failure", "MaximumRetryCount": 3},
@@ -179,7 +188,13 @@ def run_container(cpu_usage, ram_usage, hard_disk_usage, gpu_usage, public_key, 
         # Check the status to determine if the container ran successfully
         if container.status == "created":
             bt.logging.info("Container was created successfully.")
-            info = {"username": "root", "password": password, "port": docker_ssh_port, "fixed_external_user_port": external_user_port, "version" : __version_as_int__}
+            info = {
+                    "username": "root",
+                    "password": password,
+                    "port": docker_ssh_port,
+                    "external_user_ports": external_user_ports,
+                    "version": __version_as_int__
+            }
             info_str = json.dumps(info)
             public_key = public_key.encode("utf-8")
             encrypted_info = rsa.encrypt_data(public_key, info_str)

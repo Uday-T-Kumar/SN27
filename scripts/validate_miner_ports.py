@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Simple port validation script for Subnet 27 miner
-Tests if ports are accessible from external internet
+Port validation script for Subnet 27 miner
+Tests if multiple ports are accessible from external internet
 """
 
 import socket
@@ -63,15 +63,22 @@ class SimpleTestServer:
 class PortValidator:
     """Simple port validator using external checking service"""
 
-    def __init__(self, ssh_port=4444, axon_port=8091, external_port=27015):
+    def __init__(self, ssh_port=4444, axon_port=8091, external_ports=None):
+        if external_ports is None:
+            external_ports = [27015, 27016, 27017, 27018]
+
         self.ports = {
             f'SSH ({ssh_port})': ssh_port,
             f'Axon ({axon_port})': axon_port,
-            f'External ({external_port})': external_port
         }
+
+        # Add multiple external ports
+        for port in external_ports:
+            self.ports[f'External ({port})'] = port
+
         self.ssh_port = ssh_port
         self.axon_port = axon_port
-        self.external_port = external_port
+        self.external_ports = external_ports
         self.servers = {}
         self.public_ip = None
 
@@ -292,14 +299,16 @@ class PortValidator:
             print("\n📝 Troubleshooting steps:")
             print("   1. If on cloud hosting:")
             print("      - Check your provider's security groups/firewall rules")
-            print(f"      - Ensure inbound rules allow TCP on ports {self.ssh_port}, {self.axon_port}, {self.external_port}")
+            external_ports_str = ', '.join(str(p) for p in self.external_ports)
+            print(f"      - Ensure inbound rules allow TCP on ports {self.ssh_port}, {self.axon_port}, {external_ports_str}")
             print("   2. If on home network:")
             print("      - Configure port forwarding on your router")
             print("      - Forward external ports to your machine's local IP")
             print("   3. Check local firewall:")
             print(f"      - Run: sudo ufw allow {self.ssh_port}/tcp")
             print(f"      - Run: sudo ufw allow {self.axon_port}/tcp")
-            print(f"      - Run: sudo ufw allow {self.external_port}/tcp")
+            for port in self.external_ports:
+                print(f"      - Run: sudo ufw allow {port}/tcp")
 
         print("\n" + "="*60)
         return all_good
@@ -309,13 +318,13 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Simple port validator for Subnet 27',
+        description='Port validator for Subnet 27',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   python3 validate_miner_ports.py                               # Use default ports
   python3 validate_miner_ports.py --ssh-port 2222               # Custom SSH port
-  python3 validate_miner_ports.py --ssh-port 4444 --axon-port 8091 --external-port 27015
+  python3 validate_miner_ports.py --ssh-port 4444 --axon-port 8091 --external-ports 27015,27016,27017,27018
         """
     )
 
@@ -323,20 +332,23 @@ Examples:
                        help='SSH port (default: 4444)')
     parser.add_argument('--axon-port', type=int, default=8091,
                        help='Axon port (default: 8091)')
-    parser.add_argument('--external-port', type=int, default=27015,
-                       help='External port (default: 27015)')
+    parser.add_argument('--external-ports', type=str, default='27015,27016,27017,27018',
+                       help='Comma-separated list of external ports (default: 27015,27016,27017,27018)')
 
     args = parser.parse_args()
 
+    # Parse external ports from comma-separated string to list of integers
+    external_ports = [int(p.strip()) for p in args.external_ports.split(',')]
+
     print("\n🔧 Subnet 27 Port Validator")
     print("   This tool checks if your ports are accessible from the internet")
-    print(f"   Testing ports: SSH={args.ssh_port}, Axon={args.axon_port}, External={args.external_port}")
+    print(f"   Testing ports: SSH={args.ssh_port}, Axon={args.axon_port}, External={','.join(str(p) for p in external_ports)}")
     print("   Press Ctrl+C to cancel at any time\n")
 
     validator = PortValidator(
         ssh_port=args.ssh_port,
         axon_port=args.axon_port,
-        external_port=args.external_port
+        external_ports=external_ports
     )
 
     try:

@@ -202,6 +202,7 @@ class TestRunContainer:
             "volume_path": "/dummy/volume",
             "ssh_key": "dummy_ssh_key",
             "ssh_port": 2222,
+            "external_user_ports": {},  # No external user ports in this test
             "dockerfile": ""
         }
         testing = True
@@ -217,9 +218,15 @@ class TestRunContainer:
         _, kwargs = docker_client.containers.run.call_args
         assert kwargs.get("name") == "test_container"
 
-        # FIXME: not sure why the first one is lost, need to fix this assert
-        #mock_open_fn.assert_called_with('./tmp/dockerfile', 'w')
-        mock_open_fn.assert_called_with('allocation_key', 'w')
+        # Verify both file writes occurred (dockerfile and allocation_key)
+        assert mock_open_fn.call_count == 2
+        calls = mock_open_fn.call_args_list
+        # First call is for dockerfile
+        assert calls[0][0][0] == './tmp/dockerfile'
+        assert calls[0][0][1] == 'w'
+        # Second call is for allocation_key
+        assert calls[1][0][0] == 'allocation_key'
+        assert calls[1][0][1] == 'w'
 
         expected_info = base64.b64encode(b"encrypted_data").decode("utf-8")
         assert result
@@ -238,7 +245,7 @@ class TestRunContainer:
     ):
         """
         Test that verifies the external port configuration is correctly propagated to container.run arguments.
-        This test ensures that the fixed_external_user_port from docker_requirement is properly mapped
+        This test ensures that external_user_ports from docker_requirement is properly mapped
         to the container's port configuration.
         """
         # Prepare input parameters with specific port configuration
@@ -251,8 +258,8 @@ class TestRunContainer:
             "base_image": "dummy_base",
             "volume_path": "/dummy/volume",
             "ssh_key": "dummy_ssh_key",
-            "ssh_port": 2222,
-            "fixed_external_user_port": 8000,  # Specific external port to test
+            "ssh_port": 2222,  # SSH port (unchanged from main)
+            "external_user_ports": {27015: 8000},  # Internal:external port mapping for user ports
             "dockerfile": ""
         }
         testing = True
@@ -274,12 +281,12 @@ class TestRunContainer:
         # Verify port mapping - this is the key test
         actual_ports = kwargs.get("ports", {})
         assert 22 in actual_ports  # SSH port
-        assert actual_ports[22] == 2222  # SSH port mapping
-        assert 27015 in actual_ports  # Internal user port (INTERNAL_USER_PORT)
-        assert actual_ports[27015] == 8000  # External port from docker_requirement
+        assert actual_ports[22] == 2222  # SSH port mapping (unchanged)
+        assert 27015 in actual_ports  # Internal user port
+        assert actual_ports[27015] == 8000  # External port from external_user_ports
 
-        # Verify file operations
-        mock_open_fn.assert_called_with('allocation_key', 'w')
+        # Verify file operations (both dockerfile and allocation_key)
+        assert mock_open_fn.call_count == 2
 
         # Verify result structure
         expected_info = base64.b64encode(b"encrypted_data").decode("utf-8")
@@ -298,10 +305,10 @@ class TestRunContainer:
         mock_open_fn,
     ):
         """
-        Test that verifies the default port configuration when fixed_external_user_port is not specified.
-        This test ensures that when no external port is provided, the default behavior is maintained.
+        Test that verifies the default port configuration when external_user_ports is not specified.
+        This test ensures that when no external user ports are provided, only SSH port is mapped.
         """
-        # Prepare input parameters without fixed_external_user_port
+        # Prepare input parameters without external_user_ports
         cpu_usage = {"assignment": "0-1"}
         ram_usage = {"capacity": "5g"}
         hard_disk_usage = {"capacity": "100g"}
@@ -312,7 +319,7 @@ class TestRunContainer:
             "volume_path": "/dummy/volume",
             "ssh_key": "dummy_ssh_key",
             "ssh_port": 2222,
-            # No fixed_external_user_port specified - should use default
+            # No external_user_ports specified - should only map SSH
             "dockerfile": ""
         }
         testing = True
@@ -331,16 +338,15 @@ class TestRunContainer:
         assert kwargs.get("detach") is True
         assert kwargs.get("init") is True
 
-        # Verify port mapping with default behavior
+        # Verify port mapping with default behavior (only SSH port)
         actual_ports = kwargs.get("ports", {})
         assert 22 in actual_ports  # SSH port
         assert actual_ports[22] == 2222  # SSH port mapping
-        assert 27015 in actual_ports  # Internal user port (INTERNAL_USER_PORT)
-        # When no fixed_external_user_port is specified, it should be None
-        assert actual_ports[27015] is None
+        # No user ports should be in the mapping when external_user_ports is empty
+        assert len(actual_ports) == 1
 
-        # Verify file operations
-        mock_open_fn.assert_called_with('allocation_key', 'w')
+        # Verify file operations (both dockerfile and allocation_key)
+        assert mock_open_fn.call_count == 2
 
         # Verify result structure
         expected_info = base64.b64encode(b"encrypted_data").decode("utf-8")

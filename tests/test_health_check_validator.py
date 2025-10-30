@@ -54,7 +54,7 @@ def miner_info():
         'port': 22,
         'username': 'test',
         'password': 'test',
-        'fixed_external_user_port': 27015
+        'external_user_ports': {27015: 8000}  # internal_port: external_port mapping
     }
 
 
@@ -339,10 +339,12 @@ class TestHealthCheckIntegration:
 
         assert result is True
         mock_health_check_functions['upload_script'].assert_called_once()
-        mock_health_check_functions['start_server'].assert_called_once()
-        mock_health_check_functions['wait_port_ready'].assert_called_once()
-        mock_health_check_functions['wait_health'].assert_called_once()
-        mock_health_check_functions['kill_server'].assert_called_once()
+        # With multiple ports support, these are called once per port
+        num_ports = len(miner_info['external_user_ports'])
+        assert mock_health_check_functions['start_server'].call_count == num_ports
+        assert mock_health_check_functions['wait_port_ready'].call_count == num_ports
+        assert mock_health_check_functions['wait_health'].call_count == num_ports
+        assert mock_health_check_functions['kill_server'].call_count == num_ports
 
     def test_perform_health_check_ssh_failure(self, mock_paramiko, mock_axon, miner_info):
         """Test health check failure when SSH connection fails."""
@@ -364,6 +366,8 @@ class TestHealthCheckIntegration:
             result = perform_health_check(mock_axon, miner_info)
 
             assert result is False
+            mock_upload_script.assert_called_once()
+            mock_start_server.assert_called_once()  # Only called once before failing
 
     def test_perform_health_check_upload_failure(self, mock_paramiko, mock_axon, miner_info):
         """Test health check failure when script upload fails."""
@@ -390,7 +394,11 @@ class TestHealthCheckIntegration:
     def test_perform_health_check_server_not_ready(self, mock_paramiko, mock_axon, miner_info):
         """Test health check when server doesn't signal readiness."""
         mock_upload_script = mock.MagicMock(return_value=True)
-        mock_start_server = mock.MagicMock(return_value=(True, mock.MagicMock()))
+        mock_channel = mock.MagicMock()
+        mock_channel.closed = False
+        mock_channel.recv_ready.return_value = False
+        mock_channel.recv_stderr_ready.return_value = False
+        mock_start_server = mock.MagicMock(return_value=(True, mock_channel))
         mock_wait_port_ready = mock.MagicMock(return_value=False)
 
         with mock.patch('neurons.Validator.health_check.upload_health_check_script', mock_upload_script), \
@@ -401,11 +409,20 @@ class TestHealthCheckIntegration:
             result = perform_health_check(mock_axon, miner_info)
 
             assert result is False
+            mock_upload_script.assert_called_once()
+            # Should be called once per port
+            assert mock_start_server.call_count == len(miner_info['external_user_ports'])
+            # Should be called once (fails on first port check)
+            mock_wait_port_ready.assert_called_once()
 
     def test_perform_health_check_http_check_failure(self, mock_paramiko, mock_axon, miner_info):
         """Test health check when HTTP health check fails."""
         mock_upload_script = mock.MagicMock(return_value=True)
-        mock_start_server = mock.MagicMock(return_value=(True, mock.MagicMock()))
+        mock_channel = mock.MagicMock()
+        mock_channel.closed = False
+        mock_channel.recv_ready.return_value = False  # No data to read
+        mock_channel.recv_stderr_ready.return_value = False  # No stderr data
+        mock_start_server = mock.MagicMock(return_value=(True, mock_channel))
         mock_wait_port_ready = mock.MagicMock(return_value=True)
         mock_wait_health = mock.MagicMock(return_value=False)
         mock_kill_server = mock.MagicMock(return_value=True)
@@ -420,6 +437,13 @@ class TestHealthCheckIntegration:
             result = perform_health_check(mock_axon, miner_info)
 
             assert result is False
+            mock_upload_script.assert_called_once()
+            # All servers should start
+            num_ports = len(miner_info['external_user_ports'])
+            assert mock_start_server.call_count == num_ports
+            assert mock_wait_port_ready.call_count == num_ports
+            # HTTP check fails on first port
+            mock_wait_health.assert_called_once()
 
     def test_perform_health_check_kill_server_failure(self, mock_paramiko, mock_axon, miner_info):
         """Test health check when killing server fails but health check succeeds."""
@@ -455,6 +479,8 @@ class TestHealthCheckIntegration:
         """Test health check with channel output reading after HTTP check."""
         mock_channel = mock.MagicMock()
         mock_channel.closed = False
+        mock_channel.recv_ready.return_value = False
+        mock_channel.recv_stderr_ready.return_value = False
 
         mock_upload_script = mock.MagicMock(return_value=True)
         mock_start_server = mock.MagicMock(return_value=(True, mock_channel))
@@ -474,7 +500,9 @@ class TestHealthCheckIntegration:
             result = perform_health_check(mock_axon, miner_info)
 
             assert result is True
-            mock_read_output.assert_called()
+            # read_channel_output is called twice per channel (before and after kill)
+            num_ports = len(miner_info['external_user_ports'])
+            assert mock_read_output.call_count == num_ports * 2
 
     def test_perform_health_check_channel_closed_after_http_check(self, mock_paramiko, mock_axon, miner_info):
         """Test health check when channel is closed after HTTP check."""
@@ -502,6 +530,8 @@ class TestHealthCheckIntegration:
         """Test health check with channel output reading after server kill."""
         mock_channel = mock.MagicMock()
         mock_channel.closed = False
+        mock_channel.recv_ready.return_value = False
+        mock_channel.recv_stderr_ready.return_value = False
 
         mock_upload_script = mock.MagicMock(return_value=True)
         mock_start_server = mock.MagicMock(return_value=(True, mock_channel))

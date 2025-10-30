@@ -1258,7 +1258,7 @@ class Validator:
                             'port': info['port'],
                             'username': info['username'],
                             'password': info['password'],
-                            'fixed_external_user_port': info.get('fixed_external_user_port', 27015),
+                            'external_user_ports': info.get('external_user_ports', {}),
                         }
                         await self.pubsub_client.publish_miner_allocation(
                             miner_hotkey=axon.hotkey,

@@ -163,12 +163,12 @@ class ComputeArgPaser(argparse.ArgumentParser):
             default=4444,
             help="The ssh port for the allocation service.",
         )
-        # add user port argument
+        # add user ports argument
         self.add_argument(
-            "--external.fixed-port",
-            type=int,
-            default=27015,
-            help="The fixed external port that clients can use for their own purposes.",
+            "--external.ports",
+            type=str,
+            default="27015,27016,27017,27018",
+            help="Comma-separated list of external ports that clients can use (internal ports will be 27015-27018).",
         )
 
     @staticmethod
