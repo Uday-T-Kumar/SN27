@@ -29,6 +29,7 @@ if __name__ == '__main__':
         for uid, ax in enumerate(m.axons):
             with open("metagrafdata.txt", "a") as file:
                 file.write(f"{uid}, {ax.ip} {ax.port} {m.hotkeys[uid]}\n")
+                logger.info("Successfully retrieved metagraf data")
     except HTTPError as http_err:              # Handling the HTTP errors
         sys.exit(1)
         if http_err.response.status_code ==404:
