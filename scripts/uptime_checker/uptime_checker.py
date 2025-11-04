@@ -16,42 +16,42 @@ from requests.exceptions import HTTPError
 
 # Module to run curl requests on IP:Port and report back if they are reachable or not
 def check_miner_ip(final_url):
-    result = 0
+    result = 5
     try:
         logger.info("module start: check miner ip" )
         #print("func check miner ip start")
         response = requests.get(final_url, timeout=0.4) #0.5,1,2
         logger.info(response)
         logger.info(response.status_code == 200)
-        result = 1
+        result = 4
         logger.info("1 - 200 - Success")
     except HTTPError as http_err:              # Handling the HTTP errors
         if http_err.response.status_code ==404:
             logger.warning("1a - 404 - URL Didn't work")
-            result = 1                        # Marking them as true because it still 
+            result = 6                        # Marking them as true because it still 
         elif http_err.response.status_code ==500:
             logger.warning("1b - Server error")
-            result = 1
+            result = 6
     except requests.exceptions.Timeout:        # Handling timeouts
         logger.warning("2- The request timed out!")
-        result = 1
+        result = 6
     except requests.exceptions.ConnectionError as e:
         if e.args and isinstance(e.args[0], tuple) and isinstance(e.args[0][1], ConnectionRefusedError):
             errno = e.args[0][1].errno
             logger.eror(f"3a -ConnectionError: Errno = {errno}")
-            result = 0
+            result = 5
         else:
             logger.error(f"3b -ConnectionError: {e}")
-            result = 0
+            result = 5
             #print(f"ErrNo. - {errno}")
     except requests.exceptions.RequestException as e:  #Handling other request errors
         logger.error(f"4 -An error occurred: {e}")
-        result = 0
+        result = 5
     except Exception as e:
         logger.error(f"5- Unexpected error {e}")
-        result = 0
+        result = 5
     
-    if(result == 1):
+    if(result == 4 or result == 6):
         return True
     else: 
         return False
