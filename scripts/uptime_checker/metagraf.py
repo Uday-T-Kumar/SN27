@@ -1,10 +1,8 @@
 import logging
 import requests
 import sys
-import time
 import bittensor as bt
-from datetime import datetime, timezone
-from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
+from requests.exceptions import HTTPError
 
 if __name__ == '__main__':
     #Logging

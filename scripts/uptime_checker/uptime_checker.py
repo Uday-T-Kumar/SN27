@@ -6,50 +6,50 @@ import json
 import logging
 import requests
 import time
-import socket
 from avro.io import BinaryEncoder, DatumWriter
 from datetime import datetime, timezone
 from google.api_core.exceptions import NotFound
 from google.cloud.pubsub import PublisherClient
 from google.pubsub_v1.types import Encoding
-from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
+from requests.exceptions import HTTPError
 
 
 # Module to run curl requests on IP:Port and report back if they are reachable or not
 def check_miner_ip(final_url):
     try:
-        logger.info("fun check miner ip start")
+        logger.info("module start: check miner ip" )
         #print("func check miner ip start")
         response = requests.get(final_url, timeout=0.4) #0.5,1,2
         logger.info(response)
         logger.info(response.status_code == 200)
-        return True
-        logger.info("200")
+        result = True
+        logger.info("1 - 200 - Success")
     except HTTPError as http_err:              # Handling the HTTP errors
         if http_err.response.status_code ==404:
             logger.warning("1a - 404 - URL Didn't work")
-            return True                        # Marking them as true because it still 
+            result = True                        # Marking them as true because it still 
         elif http_err.response.status_code ==500:
             logger.warning("1b - Server error")
-            return True
+            result = True
     except requests.exceptions.Timeout:        # Handling timeouts
         logger.warning("2- The request timed out!")
-        return False
+        result = False
     except requests.exceptions.ConnectionError as e:
         if e.args and isinstance(e.args[0], tuple) and isinstance(e.args[0][1], ConnectionRefusedError):
             errno = e.args[0][1].errno
             logger.eror(f"3a -ConnectionError: Errno = {errno}")
-            return False
+            result = False
         else:
             logger.error(f"3b -ConnectionError: {e}")
-            return False
+            result = False
             #print(f"ErrNo. - {errno}")
     except requests.exceptions.RequestException as e:  #Handling other request errors
         logger.error(f"4 -An error occurred: {e}")
-        return False
+        result = False
     except Exception as e:
         logger.error(f"5- Unexpected error {e}")
-        return False
+        result = False
+    return result
 
 
 #def pubsub_subs(topic_path, bout, record):
