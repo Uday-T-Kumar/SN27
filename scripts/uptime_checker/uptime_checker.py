@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     #Config file
     config = configparser.ConfigParser()
-    config.read('/home/sn27/uptime_checker/uptime_check_config.ini')
+    config.read('/home/sn27/SN27/scripts/uptime_checker/uptime_check_config.ini')
 
     #main
     #logging

@@ -4,7 +4,7 @@
 VENV_PATH="/home/sn27/SN27/venv"
 
 # Path of Python script
-SCRIPT_PATH="/home/sn27/uptime_checker"
+SCRIPT_PATH="/home/sn27/SN27/scripts/uptime_checker"
 
 # Activate the venv
 source "$VENV_PATH/bin/activate"

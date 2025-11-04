@@ -9,7 +9,7 @@ from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestExce
 if __name__ == '__main__':
     #Logging
     logging.basicConfig(level=logging.DEBUG,
-        filename='metagraf.log',
+        filename='/home/sn27/SN27/scripts/uptime_checker/metagraf.log',
         encoding='utf-8',
         filemode='a',
         format='%(asctime)s - %(levelname)s - %(message)s'
