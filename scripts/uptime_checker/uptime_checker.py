@@ -16,40 +16,45 @@ from requests.exceptions import HTTPError
 
 # Module to run curl requests on IP:Port and report back if they are reachable or not
 def check_miner_ip(final_url):
+    result = 0
     try:
         logger.info("module start: check miner ip" )
         #print("func check miner ip start")
         response = requests.get(final_url, timeout=0.4) #0.5,1,2
         logger.info(response)
         logger.info(response.status_code == 200)
-        result = True
+        result = 1
         logger.info("1 - 200 - Success")
     except HTTPError as http_err:              # Handling the HTTP errors
         if http_err.response.status_code ==404:
             logger.warning("1a - 404 - URL Didn't work")
-            result = True                        # Marking them as true because it still 
+            result = 1                        # Marking them as true because it still 
         elif http_err.response.status_code ==500:
             logger.warning("1b - Server error")
-            result = True
+            result = 1
     except requests.exceptions.Timeout:        # Handling timeouts
         logger.warning("2- The request timed out!")
-        result = False
+        result = 1
     except requests.exceptions.ConnectionError as e:
         if e.args and isinstance(e.args[0], tuple) and isinstance(e.args[0][1], ConnectionRefusedError):
             errno = e.args[0][1].errno
             logger.eror(f"3a -ConnectionError: Errno = {errno}")
-            result = False
+            result = 0
         else:
             logger.error(f"3b -ConnectionError: {e}")
-            result = False
+            result = 0
             #print(f"ErrNo. - {errno}")
     except requests.exceptions.RequestException as e:  #Handling other request errors
         logger.error(f"4 -An error occurred: {e}")
-        result = False
+        result = 0
     except Exception as e:
         logger.error(f"5- Unexpected error {e}")
-        result = False
-    return result
+        result = 0
+    
+    if(result == 1):
+        return True
+    else: 
+        return False
 
 
 #def pubsub_subs(topic_path, bout, record):
