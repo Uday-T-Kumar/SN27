@@ -28,13 +28,13 @@ def check_miner_ip(final_url):
     except HTTPError as http_err:              # Handling the HTTP errors
         if http_err.response.status_code ==404:
             logger.warning("1a - 404 - URL Didn't work")
-            result = 6                        # Marking them as true because it still 
+            result = 5                        # Marking them as true because it still 
         elif http_err.response.status_code ==500:
             logger.warning("1b - Server error")
-            result = 6
+            result = 5
     except requests.exceptions.Timeout:        # Handling timeouts
         logger.warning("2- The request timed out!")
-        result = 6
+        result = 5
     except requests.exceptions.ConnectionError as e:
         if e.args and isinstance(e.args[0], tuple) and isinstance(e.args[0][1], ConnectionRefusedError):
             errno = e.args[0][1].errno
