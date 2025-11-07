@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "Avro",
+  "fields": [
+    {
+      "name": "Time",
+      "type": "string"
+    },
+    {
+      "name": "ID",
+      "type": "string"
+    },
+    {
+      "name": "Reachable",
+      "type": "boolean"
+    }
+  ]
+}
