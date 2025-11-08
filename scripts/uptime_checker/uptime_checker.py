@@ -13,7 +13,6 @@ from google.cloud.pubsub import PublisherClient
 from google.pubsub_v1.types import Encoding
 from requests.exceptions import HTTPError
 
-
 # Module to run curl requests on IP:Port and report back if they are reachable or not
 def check_miner_ip(final_url):
     result = False
@@ -28,7 +27,7 @@ def check_miner_ip(final_url):
     except HTTPError as http_err:              # Handling the HTTP errors
         if http_err.response.status_code ==404:
             logger.warning("1a - 404 - URL Didn't work")
-            result = False                        # Marking them as responsive because it still 
+            result = False                        # Marking them as responsive because it still
         elif http_err.response.status_code ==500:
             logger.warning("1b - Server error")
             result = False
@@ -51,7 +50,6 @@ def check_miner_ip(final_url):
         logger.error(f"5- Unexpected error {e}")
         result = False
     return result
-
 
 #def pubsub_subs(topic_path, bout, record):
 def pubsub_subs(topic_path, bout, record):
@@ -92,8 +90,6 @@ def pubsub_subs(topic_path, bout, record):
     except NotFound:
         logger.debug(f"{topic_id} not found.")
 
-
-
 if __name__ == '__main__':
     ## Perf testing
     start_time = time.perf_counter()
@@ -121,7 +117,6 @@ if __name__ == '__main__':
     logger.info("-----*****  Miner Uptime check start  ******-----")
     logger.info(f"Start time:{formatted_time}, {start_time:.6f} seconds")
 
-
     project_id = config['gcloud']['project_id']
     topic_id = config['gcloud']['topic_id']
     avsc_file = config['gcloud']['avsc_file']
@@ -133,7 +128,6 @@ if __name__ == '__main__':
         avro_schema = schema.parse(file.read())
     writer = DatumWriter(avro_schema)
     bout = io.BytesIO()
-
 
     #final_url = [] #multiprocessing
     # Use the data from metagraf, check their connectivity & report to gcloud PubSub
@@ -166,7 +160,6 @@ if __name__ == '__main__':
         resp=pool.map(check_miner_ip, final_url)
         print(resp)
     '''
-
 
     # Record the end time
     end_time = time.perf_counter()
