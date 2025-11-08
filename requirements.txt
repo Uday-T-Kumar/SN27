@@ -32,8 +32,6 @@ at==0.0.3
     # via NI-Compute (pyproject.toml)
 attrs==25.1.0
     # via aiohttp
-avro==1.12.0
-    # via google-cloud-pubsub
 backoff==2.2.1
     # via bittensor-cli
 base58==2.1.1
@@ -74,8 +72,6 @@ click==8.1.8
     #   wandb
 colorama==0.4.6
     # via bittensor
-configparser==7.2.0
-    # via NI-Compute (pyproject.toml)
 cryptography==43.0.1
     # via
     #   NI-Compute (pyproject.toml)
@@ -172,15 +168,6 @@ jinja2==3.1.5
     # via
     #   bittensor-cli
     #   torch
-jsonpatch==1.32
-jsonpointer==2.0
-jsonschema==3.2.0
-    # via
-    #   google-api-core
-    #   google-cloud-pubsub
-    #   fastapi
-    #   pydantic
-    #   pydantic-core
 levenshtein==0.27.1
     # via python-levenshtein
 markdown-it-py==3.0.0
