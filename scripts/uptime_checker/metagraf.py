@@ -14,7 +14,7 @@ if __name__ == '__main__':
     )
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
-    ''' 
+    '''
     [Log]
     level = DEBUG
     log_file = uptime.log
