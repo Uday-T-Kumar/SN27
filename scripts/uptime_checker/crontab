@@ -3,3 +3,4 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 0 */6 * * * /home/sn27/SN27/scripts/uptime_checker/metagraf.sh >> /tmp/metagraf_cron.txt 2>&1
 */4 * * * * /home/sn27/SN27/scripts/uptime_checker/uptime_checker.sh >> /tmp/uptime_cron.txt 2>&1
+0 */6 * * * /home/sn27/SN27/scripts/uptime_checker/uptime_log_rotate.sh >> /tmp/uptime_log_rotate.txt 2>&1
