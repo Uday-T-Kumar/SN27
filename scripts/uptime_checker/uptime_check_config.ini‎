@@ -1,5 +1,5 @@
 [Log]
-level = DEBUG
+level = INFO
 log_file = /home/sn27/SN27/scripts/uptime_checker/uptime.log
 log_encoding = utf-8
 log_filemode = a
